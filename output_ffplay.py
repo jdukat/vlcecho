@@ -16,3 +16,8 @@ class OutputFFPlay:
         if(self.my_ffplay != None):
             self.my_ffplay.kill()
             self.my_ffplay = None
+
+    def is_running(self):
+        if(self.my_ffplay != None and self.my_ffplay.poll() == None):
+            return True
+        return False

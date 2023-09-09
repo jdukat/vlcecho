@@ -60,6 +60,8 @@ class VlcServer(socketserver.BaseRequestHandler):
         if( self.my_stream != None ):
             output = f"( new input: {self.my_stream} )\r\n"
         output += f"( audio volume: {self.my_vol_ctrl.get_volume() * 5} )\r\n"
+        if(self.my_player.is_running() == False):
+            self.cmd_stop()
         output += f"( state {self.my_state} )\r\n"
         self.send_output(output)
 
