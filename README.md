@@ -7,6 +7,12 @@ It has no security features.
 It's an initial implementation that just works "good enough" for me.  
 
 ## Running the server
-Recommend to run in tmux or similar environment.  
+Before running the server, edit the config.yaml:  
+- Update allow_list for your clients
+- Generate password with:
+    echo -n '<password>' | sha256sum
+
+I recommend to run in tmux or similar environment.  
 Just run:  
     python3 src/main.py
+And may want to detach the tmux session and leave it running.
