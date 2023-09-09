@@ -1,0 +1,9 @@
+server:
+  port: 4212 # server listen port, 4212 is default for VLC
+  password: update_with_sha256sum
+  allow_list: # allowed clients
+    - 127.0.0.1
+
+audio:
+  # Volume control will look for this device with amixer -D <volume_device>
+  volume_device: pulse

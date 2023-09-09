@@ -1,5 +1,6 @@
 import socketserver
 import time
+import hashlib
 from alsa_vol_ctrl import VolumeControl
 from output_ffplay import OutputFFPlay
 
@@ -10,23 +11,42 @@ class VlcServer(socketserver.BaseRequestHandler):
     my_time = None
     my_vol_ctrl = None
     my_player = None
+    my_cfg = None
 
-    def initialize(self):
-        self.my_vol_ctrl = VolumeControl('pulse')
+    def setup(self):
+        self.my_cfg = self.server.conn
+        self.my_vol_ctrl = VolumeControl(self.my_cfg['audio']['volume_device'])
         self.my_player = OutputFFPlay()
 
     def handle(self):
-        print(f"Incoming connection from {self.client_address[0]}")
-        self.initialize()
-        self.authenticate()
+        client = self.client_address[0]
+        print(f"Incoming connection from {client}")
+        if(not client in self.my_cfg['server']['allow_list']):
+            print("! Not in server.allow_list !")
+            self.request.close()
+            return
+        if(not self.authenticate()):
+            self.request.close()
+            return
         self.command_loop()
 
     def authenticate(self):
-        self.request.sendall(b'Password: ')
-        self.data = self.request.recv(1024).strip()
-        print(f"-> Password received: {self.data.decode()}")
-        self.request.sendall(b'Welcome, Master\r\n')
-        self.request.sendall(b'> ')
+        attempts = 3
+        while attempts > 0:
+            self.request.sendall(b'Password: ')
+            self.data = self.request.recv(1024).strip()
+            if not self.data: return False
+
+            hashed = hashlib.sha256(self.data).hexdigest()
+            print(f"Password received, hash: {hashed}")
+            if(hashed == self.my_cfg['server']['password']):
+                self.request.sendall(b'Welcome, Master\r\n')
+                self.request.sendall(b'> ')
+                return True
+            else:
+                self.request.sendall(b'Wrong password\r\n')
+                attempts -= 1
+        print("! Password authentication failed.")
 
     def command_loop(self):
         while True:
@@ -107,6 +127,9 @@ class VlcServer(socketserver.BaseRequestHandler):
         self.my_vol_ctrl.set_volume(vol / 5)
 
 
-def run_vlc_server():
-    with socketserver.TCPServer(('0.0.0.0', 4212), VlcServer) as server:
+def run_vlc_server(cfg):
+    port = cfg['server']['port']
+    assert type(port) is int, 'Port must be integer'
+    with socketserver.TCPServer(('0.0.0.0', port), VlcServer) as server:
+        server.conn = cfg
         server.serve_forever()
