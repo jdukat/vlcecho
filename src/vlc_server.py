@@ -1,12 +1,14 @@
 import socketserver
 import time
 import hashlib
+import json
 from alsa_vol_ctrl import VolumeControl
 from output_ffplay import OutputFFPlay
 
 class VlcServer(socketserver.BaseRequestHandler):
 
     my_stream = None
+    my_title = None
     my_state = 'stopped'
     my_time = None
     my_vol_ctrl = None
@@ -54,7 +56,7 @@ class VlcServer(socketserver.BaseRequestHandler):
             if not self.data: break
             cmd = self.data.decode()
             print(f"--> Command: {cmd}")
-            cmd = cmd.split()
+            cmd = cmd.split(None, 1)
             args = cmd[1:]
             cmd = cmd[0]
             if(cmd == 'status'): self.cmd_status()
@@ -86,10 +88,26 @@ class VlcServer(socketserver.BaseRequestHandler):
         self.send_output(output)
 
     def cmd_info(self):
-        None
+        if(self.my_state == 'playing'):
+            output = f"""+----[ Meta data ]\r
+| filename: {self.my_title}\r
++----[ Stream 0 ]\r
+| Type: Audio\r
++----[ end of stream info ]\r
+"""
+            self.send_output(output)
 
     def cmd_add(self, arg: str):
-        self.my_stream = arg
+        if(arg[0] == '{'):
+            print("Parsing json:")
+            print(arg)
+            arg = json.loads(arg)
+            self.my_stream = arg['stream']
+            self.my_title = arg['title']
+            print(f"Json input: {self.my_title}: {self.my_stream}")
+        else:
+            self.my_stream = arg
+            self.my_title = "Stream-FM"
         self.cmd_play()
 
     def cmd_play(self):
